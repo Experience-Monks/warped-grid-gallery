@@ -1,5 +1,7 @@
 var WarpedItem = require('./lib/WarpedItem');
 var Point = require('./lib/Point');
+var on = require('dom-event');
+var off = on.off;
 
 
 module.exports = function (config) {
@@ -66,6 +68,9 @@ module.exports = function (config) {
         _incScroll		= 0;
 
         _wonderGriding	= true;
+        _isUpdating     = false;
+
+        this.onItemClick = this.onItemClick.bind(this);
 
         /*console.log('_element: ',_element);
         console.log('_wrapper: ',_wrapper);*/
@@ -75,7 +80,7 @@ module.exports = function (config) {
 
     this.createGrid = function () {
 
-        //console.log('WarpedGrid.createGrid()');
+        console.log('WarpedGrid.createGrid()');
 
         // store the points
 
@@ -111,6 +116,8 @@ module.exports = function (config) {
                 bottomLeft:		_points[BL]
             });
 
+            //_items[i].onClick.add(this.onItemClick);
+
             if(i == _numItems-1)    this.addListeners();
         }
 
@@ -127,6 +134,8 @@ module.exports = function (config) {
         // añadimos el evento de mouse-move en tdo el documento
         //$(window).bind("mousemove", this.onMouseMove);
         _wrapper.addEventListener('mousemove', this.onMouseMove);
+        _wrapper.addEventListener('mouseenter', this.onMouseEnter);
+        _wrapper.addEventListener('mouseleave', this.onMouseLeave);
         /*if (REAL.isIOS){
          document.addEventListener("touchmove", this.touchHandler, false);
          window.addEventListener("orientationchange", this.orientationHandler, false);
@@ -152,16 +161,32 @@ module.exports = function (config) {
         //console.log('mousemove(), _mouseX: ',_mouseX,', _mouseY: ',_mouseY);
 
     };
+    this.onMouseEnter = function(e){
+        //console.log('onMouseEnter()');
+        _wonderGriding = true;
 
-    this.onItemClick = function (e) {
-        e.preventDefault();
+    };
+
+    this.onMouseLeave = function(e){
+        //console.log('onMouseLeave()');
+        _wonderGriding = false;
+        //_isUpdating = false;
+    };
+
+    this.onItemClick = function (item) {
+        //e.preventDefault();
+        //console.log('onItemClick(), item: ',item);
     };
 
     this.onInterval = function () {
 
         //console.log('onInterval(), _mouseY: ',_mouseY,', __wonderGriding: ',_wonderGriding);
 
-        if (_mouseY !== null && _wonderGriding){
+
+
+        if (typeof _mouseY !== 'undefined' && _wonderGriding){
+        //if (_mouseY !== null && _wonderGriding){
+            //_isUpdating = true;
 
             if (!_mousePoint) return;
 
@@ -184,7 +209,6 @@ module.exports = function (config) {
 
         }
 
-
         window.requestAnimFrame(_that.onInterval, null);
 
     };
@@ -195,7 +219,15 @@ module.exports = function (config) {
 
     };
 
-    // llamada al constructor
+
     this.init(config.element, config.elementWrapper);
 
-}
+    this.destroy = function (){
+
+    };
+
+    this.resize = function(){
+
+    };
+
+};
