@@ -1,6 +1,7 @@
 var WarpedItem = require('./lib/WarpedItem');
 var Point = require('./lib/Point');
 var loop = require('raf-loop');
+var Tween = require('gsap');
 
 var WarpedGridGallery = function (config) {
     this.init(config);
@@ -39,6 +40,7 @@ WarpedGridGallery.prototype = {
         this.stop = this.stop.bind(this);
 
         this._doRender = false;
+        this._doTransform = false;
         this.renderer = loop(this.render);
 
         this.update();
@@ -49,7 +51,10 @@ WarpedGridGallery.prototype = {
 
         setTimeout(function () {
             //if (this._mouseY)    this.start();
-            if (this._mouseY)    this.start();
+            this._doRender = true;
+            this._doTransform = true;
+            this.start();
+            //if (this._mouseY)    this.start();
         }.bind(this), 1000);
 
     },
@@ -153,7 +158,7 @@ WarpedGridGallery.prototype = {
 
         }
 
-        this._doRender = true;
+        //this._doRender = true;
 
 
     },
@@ -173,7 +178,7 @@ WarpedGridGallery.prototype = {
             var _speed = this._speed;
             var _multiSpeed = this._multiSpeed;
 
-            if (this.warp == "mousemove") {
+            if (this.warp == "mousemove" && this._doTransform) {
 
                 if (typeof this._mouseY === 'undefined') return;
 
@@ -190,7 +195,7 @@ WarpedGridGallery.prototype = {
 
                 }
 
-            } else {
+            } else if(this._doTransform) {
 
                 // rollover warp
 
@@ -215,6 +220,22 @@ WarpedGridGallery.prototype = {
                 this._items[i].render();
             }
 
+        }
+    },
+    reset: function(){
+
+        this._doTransform = false;
+
+        /*for (var i = 0; i < this._numItems; i++) {
+         this._items[i].reset();
+         }*/
+
+        for (var i = 0; i < this._points.length; i++) {
+            point = this._points[i];
+            Tween.killTweensOf(point);
+            Tween.to(point, 1,{x: point.xOrigin, y: point.yOrigin, ease: Elastic.easeOut, onComplete: function(){
+                //this._doTransform = true;
+            }.bind(this)});
         }
     },
     addListeners: function () {
@@ -245,11 +266,21 @@ WarpedGridGallery.prototype = {
     },
     onMouseEnter: function (e) {
         //console.log('WarpedGrid.onMouseEnter()');
-        this._doRender = true;
-        this.start();
+        //this._doRender = true;
+        //this.start();
+        if(this.resetTimer) clearTimeout(this.resetTimer);
+        Tween.killAll(true, true, true);
+        this._doTransform = true;
     },
     onMouseLeave: function (e) {
-        this._doRender = false;
+
+        this.resetTimer = setTimeout(function(){
+            this.reset();
+            //this._doTransform = false;
+
+        }.bind(this), 200);
+
+        //this._doRender = false;
         //this.stop();
     },
     onItemEnter: function (e) {
