@@ -1,91 +1,60 @@
 var WarpedItem = require('./lib/WarpedItem');
 var Point = require('./lib/Point');
-var on = require('dom-event');
-var off = on.off;
+var loop = require('raf-loop');
+
+var WarpedGridGallery = function(config){
+    this.init(config);
+};
+
+WarpedGridGallery.prototype = {
+    init: function(data){
+
+        this._elementString	= data.element;
+        this._elements = document.querySelectorAll(data.element);
+        this._wrapperString	= data.elementWrapper;
+        this._wrapper = document.querySelector(data.elementWrapper);
+        this._elementWidth = this._elements[0].offsetWidth;
+        this._elementHeight = this._elements[0].offsetHeight;
+
+        this._points = [];
+        this._items = [];
+
+        this._speed	= data.speed || 50;
+        this._multiSpeed = data.multiSpeed || 1;
+        this._range	= this._elementWidth * (data.range || 0.5);   // default was 1.8
+
+        this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
+        this._numItems = this._elements.length;
+        this._numRows = parseInt(this._numItems / this._elementsPerRow, 10);
+        this._numRowsRest = this._numItems % this._elementsPerRow;
+
+        //this.onItemClick = this.onItemClick.bind(this);
+        this.addListeners = this.addListeners.bind(this);
+        this.onMouseMove = this.onMouseMove.bind(this);
+        this.onMouseEnter = this.onMouseEnter.bind(this);
+        this.onMouseLeave = this.onMouseLeave.bind(this);
+        this.render = this.render.bind(this);
+        this.start = this.start.bind(this);
+        this.stop = this.stop.bind(this);
 
 
-module.exports = function (config) {
-
-    var _that,
-        _elementString,
-        _element,
-        _wrapperString,
-        _wrapper,
-        _points,
-        _items,
-        _numPoints,
-        _numItems,
-        _sti,
-        _range,
-        _speed,
-        _multiSpeed,
-        _elementWidth,
-        _elementHeight,
-        _elementsPerRow,
-        _numRows,
-        _numRowsRest,
-        _mouseX,
-        _mouseY,
-        _mousePoint,
-        _incScroll;
-
-    this.init = function (element, elementWrapper) {
-        _that			= this;
-
-        console.log('WarpedGrid.init(), element: ',element,', elementWrapper: ',elementWrapper);
-
-        window.requestAnimFrame = (function () {
-            return window.requestAnimationFrame ||
-                window.webkitRequestAnimationFrame ||
-                window.mozRequestAnimationFrame ||
-                window.oRequestAnimationFrame ||
-                window.msRequestAnimationFrame ||
-                function (/* function */ callback, /* DOMElement */ element) {
-                    window.setTimeout(callback, 1000 / 60);
-                };
-        })();
-
-        _elementString	= element;
-        _element        = document.querySelectorAll(element);
-        _wrapperString	= elementWrapper;
-        _wrapper		= document.querySelector(elementWrapper);
-        _points			= [];
-        _items			= [];
-        _sti			= 0;
-
-        _elementWidth   = _element[0].offsetWidth;
-        _elementHeight	= _element[0].offsetHeight;
-
-        _range			= _elementWidth * 0.5;   // default was 1.8
-        _elementsPerRow = parseInt(_wrapper.offsetWidth / _elementWidth, 10);
-        _speed			= 50;
-        _multiSpeed		= 1;
-        _numItems		= _element.length;
-
-        _numRows		= parseInt(_numItems / _elementsPerRow, 10);
-        _numRowsRest	= _numItems % _elementsPerRow;
-
-        _incScroll		= 0;
-
-        _wonderGriding	= true;
-        _isUpdating     = false;
-
-        this.onItemClick = this.onItemClick.bind(this);
-
-        /*console.log('_element: ',_element);
-        console.log('_wrapper: ',_wrapper);*/
+        this.renderer = loop(this.render);
+        this._doRender	= true;
 
         this.createGrid();
-    };
-
-    this.createGrid = function () {
-
-        console.log('WarpedGrid.createGrid()');
-
-        // store the points
-
+    },
+    createGrid: function(){
         var cp = 0;
         var domPoints = '';
+
+        var _numRows = this._numRows;
+        var _numRowsRest = this._numRowsRest;
+        var _elementsPerRow = this._elementsPerRow;
+        var _points = this._points;
+        var _elements = this._elements;
+        var _elementWidth = this._elementWidth;
+        var _elementHeight = this._elementHeight;
+
         var i, j;
         for (i=0; i<=(_numRows+1); i++){
             var maxCols = (i==_numRows+1)? (_numRowsRest === 0)? -1 : _numRowsRest : _elementsPerRow;
@@ -95,10 +64,10 @@ module.exports = function (config) {
             }
         }
 
-        _numPoints = cp;
+        this._numPoints = cp;
 
         // create the items
-        for (i=0; i<_numItems; i++){
+        for (i=0; i < this._numItems; i++){
             var numRow = parseInt(i/_elementsPerRow, 10);
             var numCol = i%_elementsPerRow;
             var TL = numRow*(_elementsPerRow+1) + numCol;
@@ -106,10 +75,9 @@ module.exports = function (config) {
             var BL = (numRow+1)*(_elementsPerRow+1) + numCol;
             var BR = BL + 1;
 
-            //_items[i] = new REAL.WarpedItem({
-            _items[i] = new WarpedItem({
-                element:		_element[i],
-                elementString:	_element[i].getAttribute('id'),
+            this._items[i] = new WarpedItem({
+                element:		_elements[i],
+                elementString:	_elements[i].getAttribute('id'),
                 topLeft:		_points[TL],
                 topRight:		_points[TR],
                 bottomRight:	_points[BR],
@@ -118,116 +86,85 @@ module.exports = function (config) {
 
             //_items[i].onClick.add(this.onItemClick);
 
-            if(i == _numItems-1)    this.addListeners();
+            if(i == this._numItems-1)    this.addListeners();
         }
+    },
+    addListeners: function(){
 
-//		window.requestAnimFrame(_that.onInterval, null);
-        //	setInterval(this.onInterval, 1000/60);
-        //setTimeout(this.onInterval, 1000);
+        //console.log('addListeners()');
 
-    };
+        this._wrapper.addEventListener('mousemove', this.onMouseMove);
+        this._wrapper.addEventListener('mouseenter', this.onMouseEnter);
+        this._wrapper.addEventListener('mouseleave', this.onMouseLeave);
 
-    this.addListeners = function () {
+        setTimeout(function(){
+            if(this._mouseY)    this.start();
+        }.bind(this), 1000);
 
-        //console.log('WarpedGrid.addListeners()');
+    },
+    render: function(){
 
-        // añadimos el evento de mouse-move en tdo el documento
-        //$(window).bind("mousemove", this.onMouseMove);
-        _wrapper.addEventListener('mousemove', this.onMouseMove);
-        _wrapper.addEventListener('mouseenter', this.onMouseEnter);
-        _wrapper.addEventListener('mouseleave', this.onMouseLeave);
-        /*if (REAL.isIOS){
-         document.addEventListener("touchmove", this.touchHandler, false);
-         window.addEventListener("orientationchange", this.orientationHandler, false);
-         }
-         // y escuchar cuando se ha hecho click sobre un elemento y cuando se ha cerrado
-         REAL.events.addListener(REAL.WarpedItemClick, this.onItemClick);
-         REAL.events.addListener(REAL.WarpedItemUnClick, this.onItemUnClick);
-         // el cerrar de la ficha
-         _contentClose.bind("click", this.onContentCloseClick);*/
+        //console.log('render()');
 
-        setTimeout(this.onInterval, 1000);
+        if (typeof this._mouseY !== 'undefined' && this._doRender){
 
-        //this.onInterval();
-    };
-
-    this.onMouseMove = function (e) {
-        //console.log('mousemove');
-
-        _mouseX = e.clientX;
-        _mouseY = e.clientY;
-        _mousePoint = new Point(e.pageX - parseInt(_wrapper.offsetLeft, 10), e.pageY - parseInt(_wrapper.offsetTop, 10));
-
-        //console.log('mousemove(), _mouseX: ',_mouseX,', _mouseY: ',_mouseY);
-
-    };
-    this.onMouseEnter = function(e){
-        //console.log('onMouseEnter()');
-        _wonderGriding = true;
-
-    };
-
-    this.onMouseLeave = function(e){
-        //console.log('onMouseLeave()');
-        _wonderGriding = false;
-        //_isUpdating = false;
-    };
-
-    this.onItemClick = function (item) {
-        //e.preventDefault();
-        //console.log('onItemClick(), item: ',item);
-    };
-
-    this.onInterval = function () {
-
-        //console.log('onInterval(), _mouseY: ',_mouseY,', __wonderGriding: ',_wonderGriding);
-
-
-
-        if (typeof _mouseY !== 'undefined' && _wonderGriding){
-        //if (_mouseY !== null && _wonderGriding){
-            //_isUpdating = true;
-
-            if (!_mousePoint) return;
+            if (!this._mousePoint) return;
 
             // calculate the repulsion of points
 
-            var i;
+            var _range = this._range;
+            var _speed = this._speed;
+            var _multiSpeed = this._multiSpeed;
 
-            for (i = 0; i < _numPoints; i++){
-                var point = _points[i];
-                var distanceData = _mousePoint.distanceObj(point);
+            for (var i = 0; i < this._numPoints; i++){
+                var point = this._points[i];
+
+                // get the distance from the mouse to the grid point
+                var distanceData = this._mousePoint.distanceObj(point);
 
                 point.x = (point.x - (distanceData.dx/distanceData.distance)*(_range/distanceData.distance)*_speed*_multiSpeed) - ((point.x - point.xOrigin)/2);
                 point.y = (point.y - (distanceData.dy/distanceData.distance)*(_range/distanceData.distance)*_speed*_multiSpeed) - ((point.y - point.yOrigin)/2);
 
             }
 
-            for (i = 0; i < _numItems; i++){
-                _items[i].update();
+            for (i = 0; i < this._numItems; i++){
+                this._items[i].update();
             }
 
         }
+    },
+    start: function(){
+        //console.log('start()');
+        this.renderer.start();
+    },
+    stop: function(){
+        this.renderer.stop();
+    },
+    onMouseMove: function(e){
+        //console.log('onMouseMove(), e.clientY: ',e.clientY);
+        this._mouseX = e.clientX;
+        this._mouseY = e.clientY;
+        this._mousePoint = new Point(e.pageX - parseInt(this._wrapper.offsetLeft, 10), e.pageY - parseInt(this._wrapper.offsetTop, 10));
+    },
+    onMouseEnter: function(e){
+        this._doRender = true;
+        this.start();
+    },
+    onMouseLeave: function(e){
+        this._doRender = false;
+        this.stop();
+    },
+    destroy: function(){
+        this.stop();
+        this.renderer = null;
+        for (var i=0; i < this._numItems; i++){
+            this._items[i].destroy();
+            this._items = null;
+        }
+    },
+    resize: function(){
 
-        window.requestAnimFrame(_that.onInterval, null);
-
-    };
-
-    this.toString = function () {
-
-        return 'WarpedGrid ( wrapper: '+ _wrapperString +', elements: '+ _elementString +'  )';
-
-    };
-
-
-    this.init(config.element, config.elementWrapper);
-
-    this.destroy = function (){
-
-    };
-
-    this.resize = function(){
-
-    };
-
+    }
 };
+
+module.exports = WarpedGridGallery;
