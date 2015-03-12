@@ -25,7 +25,8 @@ WarpedGridGallery.prototype = {
         this._wrapper = document.querySelector(data.elementWrapper);
 
 
-        this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elements[0].offsetWidth);
+        //this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elements[0].offsetWidth);
+        this._elementsPerRow = (data.grid) ?  data.grid[0] :  Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
 
         //this.onItemClick = this.onItemClick.bind(this);
         this.addListeners = this.addListeners.bind(this);
