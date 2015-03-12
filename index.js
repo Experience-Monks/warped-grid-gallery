@@ -24,6 +24,7 @@ WarpedGridGallery.prototype = {
         this._elements = document.querySelectorAll(data.element);
         this._wrapperString = data.elementWrapper;
         this._wrapper = document.querySelector(data.elementWrapper);
+        this.rect = this._wrapper.getBoundingClientRect();
 
 
         //this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elements[0].offsetWidth);
@@ -262,7 +263,7 @@ WarpedGridGallery.prototype = {
         //console.log('onMouseMove(), e.clientY: ',e.clientY);
         this._mouseX = e.clientX;
         this._mouseY = e.clientY;
-        this._mousePoint = new Point(e.pageX - parseInt(this._wrapper.offsetLeft, 10), e.pageY - parseInt(this._wrapper.offsetTop, 10));
+        this._mousePoint = new Point(e.pageX - parseInt(this.rect.left, 10), e.pageY - parseInt(this.rect.top, 10));
     },
     onMouseEnter: function (e) {
         //console.log('WarpedGrid.onMouseEnter()');
@@ -312,6 +313,8 @@ WarpedGridGallery.prototype = {
         //console.log('WarpedGrid.resize(), w: ',w,', h: ',h);
 
         this._doRender = false;
+
+        this.rect = this._wrapper.getBoundingClientRect();
 
         this._wrapper.style.width = w+'px';
         this._wrapper.style.height = h+'px';
