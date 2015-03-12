@@ -15,7 +15,7 @@ WarpedGridGallery.prototype = {
         // warp behaviour
 
         this.warp = data.warp || "rollover";
-        console.log('warp: ', this.warp);
+        //console.log('warp: ', this.warp);
 
         // elements
 
@@ -25,36 +25,7 @@ WarpedGridGallery.prototype = {
         this._wrapper = document.querySelector(data.elementWrapper);
 
 
-        //this._width = this._wrapper.offsetWidth;
-        //this._height = this._wrapper.offsetHeight;
-
-        /*
-        this._elementWidth = this._elements[0].offsetWidth;
-        this._elementHeight = this._elements[0].offsetHeight;
-
-        this._points = [];
-        this._centerPoints = [];
-        this._transformPoints = [];
-        this._items = [];
-
-        this._speed = data.speed || 50;
-        this._multiSpeed = data.multiSpeed || 1;
-        this._range = this._elementWidth * (data.range || 0.5);   // default was 1.8
-
-        this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
-        //this._elementsPerRow = (data.grid) ?  data.grid[0] :  Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
-        this._numItems = this._elements.length;
-        this._numRows = parseInt(this._numItems / this._elementsPerRow, 10);
-        this._numRowsRest = this._numItems % this._elementsPerRow;
-        this.totalRows = this._numRows + this._numRowsRest;*/
-
-        //this._wrapper.style.height = this.totalRows * this._elementHeight+'px';
-
-/*        console.log('_elementsPerRow: ',this._elementsPerRow);
-        console.log('_elementHeight: ',this._elementHeight);
-        console.log('this._numRows: ',this._numRows);
-        console.log('this._numRowsRest: ',this._numRowsRest);
-        console.log('this.totalRows: ',this.totalRows);*/
+        this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elements[0].offsetWidth);
 
         //this.onItemClick = this.onItemClick.bind(this);
         this.addListeners = this.addListeners.bind(this);
@@ -86,6 +57,9 @@ WarpedGridGallery.prototype = {
 
         this._elementWidth = this._elements[0].offsetWidth;
         this._elementHeight = this._elements[0].offsetHeight;
+        this._elApspectRatio = this._elementWidth/this._elementHeight;
+
+        //console.log('update(), this._elementWidth: ',this._elementWidth);
 
         this._points = [];
         this._centerPoints = [];
@@ -96,7 +70,7 @@ WarpedGridGallery.prototype = {
         this._multiSpeed = this.data.multiSpeed || 1;
         this._range = this._elementWidth * (this.data.range || 0.5);   // default was 1.8
 
-        this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
+        //this._elementsPerRow = Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
         //this._elementsPerRow = (data.grid) ?  data.grid[0] :  Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
         this._numItems = this._elements.length;
         this._numRows = parseInt(this._numItems / this._elementsPerRow, 10);
@@ -303,15 +277,23 @@ WarpedGridGallery.prototype = {
     },
     resize: function (w, h) {
 
-        console.log('WarpedGrid.resize(), w: ',w,', h: ',h);
+        //console.log('WarpedGrid.resize(), w: ',w,', h: ',h);
+
+        this._doRender = false;
 
         this._wrapper.style.width = w+'px';
         this._wrapper.style.height = h+'px';
 
+        var itemWidth = w/this._elementsPerRow;
+        var itemHeight = itemWidth/this._elApspectRatio;
+
         for(var i = 0; i < this._items.length; i++){
-            this._items[i].resize(w, h);
+            this._items[i].resize(itemWidth, itemHeight);
         }
 
+        this.update();
+
+        this._doRender = true;
 
     }
 };
