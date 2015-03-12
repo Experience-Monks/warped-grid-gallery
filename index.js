@@ -159,7 +159,7 @@ WarpedGridGallery.prototype = {
 
         }
 
-        //this._doRender = true;
+        this._doRender = true;
 
 
     },
