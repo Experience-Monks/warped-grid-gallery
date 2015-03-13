@@ -14,12 +14,11 @@ WarpedGridGallery.prototype = {
         this.data = data;
 
         // warp behaviour
-
         this.warp = data.warp || "rollover";
-        //console.log('warp: ', this.warp);
+        this._scale = data.scale;
+        this._justify = data.justify;
 
         // elements
-
         this._elementString = data.element;
         this._elements = document.querySelectorAll(data.element);
         this._wrapperString = data.elementWrapper;
@@ -31,7 +30,6 @@ WarpedGridGallery.prototype = {
         this._elementsPerRow = (data.grid) ?  data.grid[0] :  Math.ceil(this._wrapper.offsetWidth / this._elementWidth);
 
         //this.onItemClick = this.onItemClick.bind(this);
-        this.addListeners = this.addListeners.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseEnter = this.onMouseEnter.bind(this);
         this.onMouseLeave = this.onMouseLeave.bind(this);
@@ -55,7 +53,6 @@ WarpedGridGallery.prototype = {
             this._doRender = true;
             this._doTransform = true;
             this.start();
-            //if (this._mouseY)    this.start();
         }.bind(this), 1000);
 
     },
@@ -66,11 +63,11 @@ WarpedGridGallery.prototype = {
         this._elementHeight = this._elements[0].offsetHeight;
         this._elApspectRatio = this._elementWidth/this._elementHeight;
 
-        //console.log('update(), this._elementWidth: ',this._elementWidth);
-
         this._points = [];
         this._centerPoints = [];
         this._transformPoints = [];
+        this._targetPoints = [];
+        this._prevTargPoints = [];
         this._items = [];
 
         this._speed = this.data.speed || 50;
@@ -83,14 +80,14 @@ WarpedGridGallery.prototype = {
         this._numRows = parseInt(this._numItems / this._elementsPerRow, 10);
         this._numRowsRest = this._numItems % this._elementsPerRow;
         this.totalRows = this._numRows + this._numRowsRest;
+        this.totalColumns = this._elementsPerRow;
 
         this.createGrid();
 
     },
     createGrid: function () {
-        var cp = 0;
-        var domPoints = '';
 
+        var cp = 0;
         var _numRows = this._numRows;
         var _numRowsRest = this._numRowsRest;
         var _elementsPerRow = this._elementsPerRow;
@@ -107,6 +104,8 @@ WarpedGridGallery.prototype = {
             for (j = 0; j <= maxCols; j++) {
 
                 _points[cp] = new Point(j * _elementWidth, i * _elementHeight);
+                _points[cp].id = cp;
+                _points[cp].isAcive = false;
                 cp++;
 
             }
@@ -128,6 +127,62 @@ WarpedGridGallery.prototype = {
             var centerY = _points[TL].y + _elementHeight * 0.5;
             _centerPoints[i] = new Point(centerX, centerY);
 
+            var justifyTop = false;
+            var justifyRight = false;
+            var justifyBot = false;
+            var justifyLeft = false;
+
+            if(numRow === 0)    justifyTop = true;
+            if(numRow === this.totalRows)   justifyBot = true;
+            if(numCol === 0)   justifyLeft = true;
+            if(numCol === this.totalColumns)   justifyRight = true;
+
+            var xOffset = ((_elementWidth * this._scale) - _elementWidth) * 0.5;
+            var yOffset = ((_elementHeight * this._scale) - _elementHeight) * 0.5;
+
+            var targetY_TL, targetY_TR, targetY_BL, targetY_BR;
+
+            if(this._justify && numRow === 0){
+                targetY_TL = 0;
+                targetY_TR = 0;
+                targetY_BL = _points[BL].y + (yOffset * 2);
+                targetY_BR = _points[BR].y + (yOffset * 2);
+            }else if(this._justify && numRow === (this.totalRows - 1)){
+                targetY_TL = _points[TL].y - (yOffset * 2);
+                targetY_TR = _points[TR].y - (yOffset * 2);
+                targetY_BL = _points[BL].y;
+                targetY_BR = _points[BR].y;
+            }else{
+                targetY_TL = _points[TL].y - yOffset;
+                targetY_TR = _points[TR].y - yOffset;
+                targetY_BL = _points[BL].y + yOffset;
+                targetY_BR = _points[BR].y + yOffset;
+            }
+
+            var targetX_TL, targetX_TR, targetX_BL, targetX_BR;
+
+            if(this._justify && numCol === 0){
+                targetX_TL = 0;
+                targetX_TR = _points[TR].x + (xOffset * 2);
+                targetX_BL = 0;
+                targetX_BR = _points[BR].x + (xOffset * 2);
+            }else if(this._justify && numCol === (this.totalColumns - 1)){
+                targetX_TL = _points[TL].x - (xOffset * 2);
+                targetX_TR = _points[TR].x;
+                targetX_BL = _points[BL].x - (xOffset * 2);
+                targetX_BR = _points[BR].x;
+            }else{
+                targetX_TL = _points[TL].x - xOffset;
+                targetX_TR = _points[TR].x + xOffset;
+                targetX_BL = _points[BL].x - xOffset;
+                targetX_BR = _points[BR].x + xOffset;
+            }
+
+            var topLeftTarget = new Point(targetX_TL, targetY_TL);
+            var topRightTarget = new Point(targetX_TR, targetY_TR);
+            var bottomLeftTarget = new Point(targetX_BL, targetY_BL);
+            var bottomRightTarget = new Point(targetX_BR, targetY_BR);
+
             //console.log('center: ',_centerPoints[i]);
             if(this._items[i]){
 
@@ -136,7 +191,13 @@ WarpedGridGallery.prototype = {
                     topRight: _points[TR],
                     bottomRight: _points[BR],
                     bottomLeft: _points[BL],
-                    center: _centerPoints[i]
+                    center: _centerPoints[i],
+                    topLeftTarget: topLeftTarget,
+                    topRightTarget: topRightTarget,
+                    bottomLeftTarget: bottomLeftTarget,
+                    bottomRightTarget: bottomRightTarget,
+                    row: numRow,
+                    column: numCol
                 });
 
             }else{
@@ -148,33 +209,31 @@ WarpedGridGallery.prototype = {
                     topRight: _points[TR],
                     bottomRight: _points[BR],
                     bottomLeft: _points[BL],
-                    center: _centerPoints[i]
+                    center: _centerPoints[i],
+                    topLeftTarget: topLeftTarget,
+                    topRightTarget: topRightTarget,
+                    bottomLeftTarget: bottomLeftTarget,
+                    bottomRightTarget: bottomRightTarget,
+                    row: numRow,
+                    column: numCol
                 });
 
                 if (this.warp == "rollover") _elements[i].addEventListener('mouseenter', this.onItemEnter);
 
             }
 
-            //_items[i].onClick.add(this.onItemClick);
-
         }
 
         this._doRender = true;
 
-
     },
     render: function () {
-
-        //console.log('render(), this._mousePoint: ',this._mousePoint,', this._mouseY: ',this._mouseY);
 
         if (this._doRender) {
 
             // calculate the repulsion of points
 
-            var distanceData,
-                point,
-                i;
-
+            var distanceData, point, i;
             var _range = this._range;
             var _speed = this._speed;
             var _multiSpeed = this._multiSpeed;
@@ -190,31 +249,10 @@ WarpedGridGallery.prototype = {
 
                     // get the distance from the mouse to the grid point
                     distanceData = this._mousePoint.distanceObj(point);
-
                     point.x = (point.x - (distanceData.dx / distanceData.distance) * (_range / distanceData.distance) * _speed * _multiSpeed) - ((point.x - point.xOrigin) / 2);
                     point.y = (point.y - (distanceData.dy / distanceData.distance) * (_range / distanceData.distance) * _speed * _multiSpeed) - ((point.y - point.yOrigin) / 2);
 
                 }
-
-            } else if(this._doTransform) {
-
-                // rollover warp
-
-                if (!this._transformPoints.length) return;
-
-                for (i = 0; i < this._transformPoints.length; i++) {
-                    point = this._transformPoints[i];
-
-                    // get the distance from the mouse to the grid point
-                    distanceData = this._mousePoint.distanceObj(point);
-
-                    console.log('distanceData: ', distanceData);
-
-                    point.x = (point.x - (distanceData.dx / distanceData.distance) * (_range / distanceData.distance) * _speed * _multiSpeed) - ((point.x - point.xOrigin) / 2);
-                    point.y = (point.y - (distanceData.dy / distanceData.distance) * (_range / distanceData.distance) * _speed * _multiSpeed) - ((point.y - point.yOrigin) / 2);
-
-                }
-
             }
 
             for (i = 0; i < this._numItems; i++) {
@@ -227,30 +265,13 @@ WarpedGridGallery.prototype = {
 
         this._doTransform = false;
 
-        /*for (var i = 0; i < this._numItems; i++) {
-         this._items[i].reset();
-         }*/
-
         for (var i = 0; i < this._points.length; i++) {
-            point = this._points[i];
+            var point = this._points[i];
+            point.isAcive = false;
+            if(this.warp == "mousemove")    Tween.killTweensOf(point);
             Tween.killTweensOf(point);
-            Tween.to(point, 1,{x: point.xOrigin, y: point.yOrigin, ease: Elastic.easeOut, onComplete: function(){
-                //this._doTransform = true;
-            }.bind(this)});
+            Tween.to(point, this.data.tweenDuration,{x: point.xOrigin, y: point.yOrigin, ease: this.data.ease});
         }
-    },
-    addListeners: function () {
-
-        //console.log('addListeners()');
-
-        if (this.warp == "mousemove") this._wrapper.addEventListener('mousemove', this.onMouseMove);
-        this._wrapper.addEventListener('mouseenter', this.onMouseEnter);
-        this._wrapper.addEventListener('mouseleave', this.onMouseLeave);
-
-        setTimeout(function () {
-            if (this._mouseY)    this.start();
-        }.bind(this), 1000);
-
     },
     start: function () {
         //console.log('start()');
@@ -260,7 +281,7 @@ WarpedGridGallery.prototype = {
         this.renderer.stop();
     },
     onMouseMove: function (e) {
-        //console.log('onMouseMove(), e.clientY: ',e.clientY);
+        console.log('onMouseMove(), e.clientY: ',e.clientY);
         this._mouseX = e.clientX;
         this._mouseY = e.clientY;
         this._mousePoint = new Point(e.pageX - parseInt(this.rect.left, 10), e.pageY - parseInt(this.rect.top, 10));
@@ -270,31 +291,70 @@ WarpedGridGallery.prototype = {
         //this._doRender = true;
         //this.start();
         if(this.resetTimer) clearTimeout(this.resetTimer);
-        Tween.killAll(true, true, true);
+        if(this.warp == "mousemove")    Tween.killAll(true, true, true);
         this._doTransform = true;
     },
     onMouseLeave: function (e) {
 
-        this.resetTimer = setTimeout(function(){
+        if(this.warp == "mousemove"){
+            this.resetTimer = setTimeout(function(){
+                this.reset();
+            }.bind(this), 200);
+        }else{
             this.reset();
-            //this._doTransform = false;
-
-        }.bind(this), 200);
+        }
 
         //this._doRender = false;
         //this.stop();
     },
+    tweenPointsToTarget: function(){
+        //console.log('tweenPointsToTarget()');
+
+        //Tween.killTweensOf(point);
+        for(var i = 0; i < this._transformPoints.length; i++){
+            var tweenPoint = this._transformPoints[i];
+            var tweenToPoint = this._targetPoints[i];
+            Tween.killTweensOf(tweenPoint);
+            Tween.to(tweenPoint, this.data.tweenDuration,{x: tweenToPoint.x, y: tweenToPoint.y, ease: this.data.ease});
+        }
+
+        if(this._prevTargPoints.length){
+            for(var p = 0; p < this._prevTargPoints.length; p++){
+                var oldPoint = this._prevTargPoints[p];
+                if(!oldPoint.isActive){
+                    Tween.killTweensOf(oldPoint);
+                    Tween.to(oldPoint, this.data.tweenDuration,{x: oldPoint.xOrigin, y: oldPoint.yOrigin, ease: this.data.ease});
+                }
+            }
+        }
+
+        this._prevTargPoints = this._transformPoints;
+
+    },
     onItemEnter: function (e) {
         //console.log('item.onItemEnter(), e: ', e.target.id);
 
-        if (this.warp == 'rollover') {
-            this._items.forEach(function (item) {
-                if (item._elementString === e.target.id) {
-                    this._mousePoint = item._center;
-                    this._transformPoints = [item._TL, item._TR, item._BL, item._BR];
-                }
-            }.bind(this));
+        if(this._transformPoints.length){
+            for(var i = 0; i < this._transformPoints.length; i++){
+                this._transformPoints[i].isActive = false;
+            }
         }
+
+        var hasMatch = false;
+        this._items.forEach(function (item) {
+            if (item._elementString === e.target.id) {
+                //this._mousePoint = item._center;
+                item._TL.isActive = true;
+                item._TR.isActive = true;
+                item._BL.isActive = true;
+                item._BR.isActive = true;
+                this._transformPoints = [item._TL, item._TR, item._BL, item._BR];
+                this._targetPoints = [item._TLtarget, item._TRtarget, item._BLtarget, item._BRtarget];
+                hasMatch = true;
+            }
+        }.bind(this));
+
+        if(hasMatch)   this.tweenPointsToTarget(this._transformPoints, this._targetPoints);
 
     },
     destroy: function () {
@@ -304,6 +364,7 @@ WarpedGridGallery.prototype = {
         this._wrapper.removeEventListener('mouseenter', this.onMouseEnter);
         this._wrapper.removeEventListener('mouseleave', this.onMouseLeave);
         for (var i = 0; i < this._numItems; i++) {
+            if (this.warp == "rollover") this._items[i].removeEventListener('mouseenter', this.onItemEnter);
             this._items[i].destroy();
             this._items = null;
         }

@@ -9,9 +9,17 @@ require('domready')(function() {
         grid: [5, 6],   // [columns, rows]
         multiSpeed: 1,  // default 1
         speed: 50,  // default 50
+        //speed: 50,  // default 50
         range: 1.5,  // default 1.8
-        warp: "mousemove"    // rollover or mousemove
-        //warp: "rollover"    // rollover or mousemove
+        //warp: "mousemove", // rollover or mousemove
+        warp: "rollover",   // rollover or mousemove
+        ease: "Expo.easeInOut",
+        //ease: "Elastic.easeOut",
+        tweenDuration: 0.25,  // default 50
+        //tweenDuration: 1,  // default 50
+        scale: 1.3,
+        justify: false
+        //ease: "Elastic.easeOut"
     });
 
     warpGallery._wrapper.style.height = warpGallery.totalRows * warpGallery._elementHeight+'px';
