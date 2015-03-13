@@ -369,7 +369,7 @@ WarpedGridGallery.prototype = {
         for (var i = 0; i < this._numItems; i++) {
             if (this.warp == "rollover") this._items[i]._element.removeEventListener('mouseenter', this.onItemEnter);
             this._items[i].destroy();
-            this._items = null;
+            this._items[i] = null;
         }
     },
     resize: function (w, h) {
