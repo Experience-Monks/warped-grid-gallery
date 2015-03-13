@@ -35,6 +35,9 @@ WarpedGridGallery.prototype = {
         this.onMouseLeave = this.onMouseLeave.bind(this);
         this.onItemEnter = this.onItemEnter.bind(this);
         this.render = this.render.bind(this);
+        this.update = this.update.bind(this);
+        this.destroy = this.destroy.bind(this);
+        this.createGrid = this.createGrid.bind(this);
         this.start = this.start.bind(this);
         this.stop = this.stop.bind(this);
 
@@ -364,7 +367,7 @@ WarpedGridGallery.prototype = {
         this._wrapper.removeEventListener('mouseenter', this.onMouseEnter);
         this._wrapper.removeEventListener('mouseleave', this.onMouseLeave);
         for (var i = 0; i < this._numItems; i++) {
-            //if (this.warp == "rollover") this._items[i].removeEventListener('mouseenter', this.onItemEnter);
+            if (this.warp == "rollover") this._items[i].removeEventListener('mouseenter', this.onItemEnter);
             this._items[i].destroy();
             this._items = null;
         }
