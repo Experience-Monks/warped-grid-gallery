@@ -51,12 +51,18 @@ WarpedGridGallery.prototype = {
         this._wrapper.addEventListener('mouseenter', this.onMouseEnter);
         this._wrapper.addEventListener('mouseleave', this.onMouseLeave);
 
-        setTimeout(function () {
-            //if (this._mouseY)    this.start();
+        if(this.warp === "rollover"){
             this._doRender = true;
             this._doTransform = true;
             this.start();
-        }.bind(this), 1000);
+        }else{
+            setTimeout(function () {
+                //if (this._mouseY)    this.start();
+                this._doRender = true;
+                this._doTransform = true;
+                this.start();
+            }.bind(this), 1000);
+        }
 
     },
     update: function(){
