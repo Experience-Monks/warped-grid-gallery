@@ -10,7 +10,6 @@
     "url": "https://github.com/BrendanNeufeld"
   },
   "dependencies": {
-    "dom-event": "0.0.4",
     "raf-loop": "^1.0.1",
     "signals": "^1.0.0"
   },
